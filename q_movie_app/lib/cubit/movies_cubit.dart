@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../data/model/movie.dart';
 import '../data/model/movie_list.dart';
 import '../data/movie_repository.dart';
 
@@ -30,6 +31,7 @@ class MovieListCubit extends Cubit<MovieListState> {
         movieList: currPageList.movieList.toList(),
         totalPages: currPageList.totalPages,
         totalResults: currPageList.totalResults,
+        favouriteList: currPageList.favouriteList?.toList(),
       );
       _movieRepository.saveLocally(movieList!);
       emit(MovieListLoaded(movieList!));
@@ -37,6 +39,8 @@ class MovieListCubit extends Cubit<MovieListState> {
       movieList!.movieList.addAll(currPageList.movieList);
       emit(MovieListLoaded(movieList!));
     }
+
+    movieList?.favouriteList ??= [];
   }
 
   Future<void> getNextPageMovieList({required String apiKey}) async {
@@ -65,5 +69,22 @@ class MovieListCubit extends Cubit<MovieListState> {
       movieList!.movieList.addAll(currPageList.movieList);
       emit(MovieListLoaded(movieList!));
     }
+  }
+
+  void toggleFavourite(Movie fav) {
+    movieList?.favouriteList ??= [];
+    if (movieList == null) return;
+
+    if (isFavourite(fav)) {
+      movieList?.favouriteList?.removeWhere((movie) => movie.id == fav.id);
+    } else {
+      movieList?.favouriteList?.add(fav);
+    }
+    _movieRepository.saveLocally(movieList!);
+  }
+
+  bool isFavourite(Movie fav) {
+    if (movieList?.favouriteList == null) return false;
+    return movieList?.favouriteList?.contains(fav) ?? false;
   }
 }

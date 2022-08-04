@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:q_movie_app/data/model/movie.dart';
 
 import 'model/genre.dart';
 import 'model/movie_list.dart';
@@ -22,14 +23,23 @@ class MovieRepository {
       {required int page, required String apiKey}) async {
     try {
       _genreList ??= await getGenreList();
+      _dio.options.headers["authorization"] = "Bearer ${consts.bearerToken}";
 
-      Response movieListData = await _dio.get(
-          '${consts.baseMovieUrl}/popular?api_key=$apiKey&language=en_US&page=$page');
+      Response movieListData = await _dio
+          .get('${consts.baseMovieUrl}/popular?language=en_US&page=$page');
 
       final tmp = MovieList.fromJson(movieListData.data);
+      tmp.favouriteList ??= [];
+
+      if (page == 1 &&
+          _movieListBox.values.isNotEmpty &&
+          _movieListBox.values.first.favouriteList != null) {
+        tmp.favouriteList!
+            .addAll(_movieListBox.values.first.favouriteList!.toList());
+      }
 
       if (_genreList != null) updateGenres(tmp);
-
+      updateFavorites(tmp);
       return tmp;
     } on DioError {
       if (_movieListBox.isNotEmpty) {
@@ -75,5 +85,21 @@ class MovieRepository {
     _movieListBox.clear();
     _movieListBox.add(movieList);
     _movieListBox.flush();
+  }
+
+  void updateFavorites(MovieList tmp) {
+    if (_movieListBox.length == 0) return;
+    var hiveFav = _movieListBox.getAt(0);
+    if (hiveFav == null) return;
+    var hiveFavList = hiveFav.favouriteList;
+    if (hiveFavList == null) return;
+
+    for (Movie movie in tmp.movieList) {
+      for (Movie fav in hiveFavList) {
+        if (movie.id == fav.id) {
+          movie.favourite = fav.favourite;
+        }
+      }
+    }
   }
 }

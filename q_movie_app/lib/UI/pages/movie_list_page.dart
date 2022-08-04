@@ -1,3 +1,4 @@
+import 'package:expand_tap_area/expand_tap_area.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -15,6 +16,14 @@ class MovieListPage extends StatefulWidget {
 
 class _MovieListPageState extends State<MovieListPage> {
   final _listController = ScrollController();
+  int _selectedScreenIndex = 0;
+
+  void _selectScreen(int index) {
+    setState(() {
+      _selectedScreenIndex = index;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +46,25 @@ class _MovieListPageState extends State<MovieListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedScreenIndex,
+        onTap: _selectScreen,
+        backgroundColor: consts.backgroundColorNavBar,
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: ImageIcon(
+              AssetImage("assets/images/movie_selected.png"),
+            ),
+            label: 'Movies',
+          ),
+          BottomNavigationBarItem(
+            icon: ImageIcon(
+              AssetImage("assets/images/bookmark_ticked_not_selected.png"),
+            ),
+            label: 'Favourites',
+          ),
+        ],
+      ),
       body: Container(
         padding: const EdgeInsets.only(top: 30, left: 20, right: 20),
         child: BlocBuilder<MovieListCubit, MovieListState>(
@@ -45,13 +73,31 @@ class _MovieListPageState extends State<MovieListPage> {
               return buildLoadingWidget();
             } else if (state is MovieListLoadingNextPage) {
               return buildLoadedWidget(
-                  state.movieList.movieList, _listController, false, context);
+                  _selectedScreenIndex == 0
+                      ? state.movieList.movieList
+                      : state.movieList.favouriteList!,
+                  _listController,
+                  false,
+                  context,
+                  _selectedScreenIndex);
             } else if (state is MovieListLoaded) {
               return buildLoadedWidget(
-                  state.movieList.movieList, _listController, false, context);
+                  _selectedScreenIndex == 0
+                      ? state.movieList.movieList
+                      : state.movieList.favouriteList!,
+                  _listController,
+                  false,
+                  context,
+                  _selectedScreenIndex);
             } else if (state is MovieListLoadedRemoteFailed) {
               return buildLoadedWidget(
-                  state.movieList.movieList, _listController, true, context);
+                  _selectedScreenIndex == 0
+                      ? state.movieList.movieList
+                      : state.movieList.favouriteList!,
+                  _listController,
+                  true,
+                  context,
+                  _selectedScreenIndex);
             } else {
               return Container();
             }
@@ -72,7 +118,7 @@ Widget buildLoadingNextPageWidget(
 }
 
 Widget buildLoadedWidget(List<Movie> movieList, ScrollController listController,
-    bool remoteFailed, BuildContext context) {
+    bool remoteFailed, BuildContext context, int selectedIndex) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -82,109 +128,132 @@ Widget buildLoadedWidget(List<Movie> movieList, ScrollController listController,
       ),
       const SizedBox(height: 30),
       Text(
-        'Popular',
+        selectedIndex == 0 ? 'Popular' : 'Favorites',
         style: Theme.of(context).textTheme.headline1,
       ),
       const SizedBox(height: 20),
       Expanded(
         child: ListView.builder(
-            padding: EdgeInsets.zero,
-            controller: listController,
-            itemCount: movieList.length + 1,
-            itemBuilder: ((context, index) {
-              if (index < movieList.length) {
-                final item = movieList[index];
-                final title = item.title;
-                final rating = item.voteAverage;
-                return MovieTileWidget(
-                    item: item, title: title, rating: rating);
+          padding: EdgeInsets.zero,
+          controller: listController,
+          itemCount: movieList.length + 1,
+          itemBuilder: ((context, index) {
+            if (index < movieList.length) {
+              return MovieTileWidget(item: movieList[index]);
+            } else {
+              if (remoteFailed) {
+                return const Center(
+                  child: Text('web service failed'),
+                );
+              } else if (selectedIndex == 0) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: Center(child: CircularProgressIndicator()),
+                );
               } else {
-                if (remoteFailed) {
-                  return const Center(
-                    child: Text('web service failed'),
-                  );
-                } else {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
+                return Container();
               }
-            })),
+            }
+          }),
+        ),
       ),
     ],
   );
 }
 
-class MovieTileWidget extends StatelessWidget {
+class MovieTileWidget extends StatefulWidget {
   const MovieTileWidget({
     Key? key,
     required this.item,
-    required this.title,
-    required this.rating,
   }) : super(key: key);
-
   final Movie item;
-  final String title;
-  final double rating;
 
+  @override
+  State<MovieTileWidget> createState() => _MovieTileWidgetState();
+}
+
+class _MovieTileWidgetState extends State<MovieTileWidget> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () =>
-          BlocProvider.of<NavigationCubit>(context).showMovieDetails(item),
+      onTap: () => BlocProvider.of<NavigationCubit>(context)
+          .showMovieDetails(widget.item),
       child: Padding(
-          padding: const EdgeInsets.only(top: 10, bottom: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 100,
-                height: 100,
+        padding: const EdgeInsets.only(top: 10, bottom: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(2),
+                image: DecorationImage(
+                  fit: BoxFit.cover,
+                  image: NetworkImage(
+                      '${consts.imgBaseUrl}${widget.item.backdropPath}'),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.item.title,
+                    textAlign: TextAlign.start,
+                    style: Theme.of(context).textTheme.headline2,
+                    overflow: TextOverflow.fade,
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/images/star.png',
+                        fit: BoxFit.scaleDown,
+                      ),
+                      const SizedBox(height: 4),
+                      Text('${widget.item.voteAverage} /10 IMDb',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.subtitle1),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                  if (widget.item.genreNames.isNotEmpty)
+                    const SizedBox(height: 12),
+                  GenreListWidget(item: widget.item),
+                ],
+              ),
+            ),
+            ExpandTapWidget(
+              tapPadding: const EdgeInsets.all(25),
+              onTap: () {
+                widget.item.favourite = !widget.item.favourite;
+                BlocProvider.of<MovieListCubit>(context)
+                    .toggleFavourite(widget.item);
+                setState(() {});
+              },
+              child: Container(
+                width: 20,
+                height: 20,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(2),
                   image: DecorationImage(
                       fit: BoxFit.cover,
-                      image: NetworkImage(
-                          '${consts.imgBaseUrl}${item.backdropPath}')),
+                      image: AssetImage(BlocProvider.of<MovieListCubit>(context)
+                              .isFavourite(widget.item)
+                          ? 'assets/images/bookmark_selected.png'
+                          : 'assets/images/bookmark_not_selected.png')),
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      textAlign: TextAlign.start,
-                      style: Theme.of(context).textTheme.headline2,
-                      overflow: TextOverflow.fade,
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Image.asset(
-                          'assets/images/star.png',
-                          fit: BoxFit.scaleDown,
-                        ),
-                        const SizedBox(height: 4),
-                        Text('$rating /10 IMDb',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.subtitle1),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
-                    if (item.genreNames.isNotEmpty) const SizedBox(height: 12),
-                    GenreListWidget(item: item),
-                  ],
-                ),
-              ),
-            ],
-          )),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

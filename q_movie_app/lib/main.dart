@@ -28,45 +28,17 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Q Movie App',
-      theme: QThemeData().themeDataDark,
-      home: const MyHomePage(title: 'Q Movie App'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    Hive.close();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (context) => NavigationCubit()),
-        BlocProvider(
-          create: (context) => MovieListCubit(MovieRepository())
-            ..getInitialMovieList(apiKey: consts.apiKey),
-        ),
-      ],
-      child: const AppNavigator(),
-    );
+        title: 'Q Movie App',
+        theme: QThemeData().themeDataDark,
+        home: MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (context) => NavigationCubit()),
+            BlocProvider(
+              create: (context) => MovieListCubit(MovieRepository())
+                ..getInitialMovieList(apiKey: consts.apiKey),
+            ),
+          ],
+          child: const AppNavigator(),
+        ));
   }
 }

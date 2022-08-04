@@ -1,14 +1,22 @@
+import 'package:expand_tap_area/expand_tap_area.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../cubit/movies_cubit.dart';
 import 'movie_list_page.dart';
 import '../../data/model/movie.dart';
 import '../../helpers/my_const.dart' as consts;
 
-class MovieDetailsPage extends StatelessWidget {
+class MovieDetailsPage extends StatefulWidget {
   final Movie movie;
 
   const MovieDetailsPage({super.key, required this.movie});
 
+  @override
+  State<MovieDetailsPage> createState() => _MovieDetailsPageState();
+}
+
+class _MovieDetailsPageState extends State<MovieDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -25,18 +33,46 @@ class MovieDetailsPage extends StatelessWidget {
                     image: DecorationImage(
                         fit: BoxFit.cover,
                         image: NetworkImage(
-                            '${consts.imgBaseUrl}${movie.backdropPath}')),
+                            '${consts.imgBaseUrl}${widget.movie.backdropPath}')),
                   ),
                 ),
                 const SizedBox(height: 28),
                 Padding(
                   padding: const EdgeInsets.only(left: 20, right: 20),
-                  child: Text(
-                    movie.title,
-                    textAlign: TextAlign.start,
-                    style: Theme.of(context).textTheme.headline1,
-                    overflow: TextOverflow.fade,
-                    maxLines: 2,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.movie.title,
+                          textAlign: TextAlign.start,
+                          style: Theme.of(context).textTheme.headline1,
+                          overflow: TextOverflow.fade,
+                          maxLines: 2,
+                        ),
+                      ),
+                      ExpandTapWidget(
+                        tapPadding: const EdgeInsets.all(25),
+                        onTap: () {
+                          widget.movie.favourite = !widget.movie.favourite;
+                          BlocProvider.of<MovieListCubit>(context)
+                              .toggleFavourite(widget.movie);
+                          setState(() {});
+                        },
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            image: DecorationImage(
+                                fit: BoxFit.cover,
+                                image: AssetImage(widget.movie.favourite
+                                    ? 'assets/images/bookmark_selected.png'
+                                    : 'assets/images/bookmark_not_selected.png')),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -50,7 +86,7 @@ class MovieDetailsPage extends StatelessWidget {
                         fit: BoxFit.scaleDown,
                       ),
                       const SizedBox(height: 4),
-                      Text('${movie.voteAverage} /10 IMDb',
+                      Text('${widget.movie.voteAverage} /10 IMDb',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.subtitle1),
                       const SizedBox(height: 16),
@@ -60,7 +96,7 @@ class MovieDetailsPage extends StatelessWidget {
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.only(left: 20, right: 20),
-                  child: GenreListWidget(item: movie),
+                  child: GenreListWidget(item: widget.movie),
                 ),
                 const SizedBox(height: 40),
                 Padding(
@@ -75,7 +111,7 @@ class MovieDetailsPage extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(left: 20, right: 20),
                   child: Text(
-                    movie.overview,
+                    widget.movie.overview,
                     textAlign: TextAlign.start,
                     style: Theme.of(context).textTheme.bodyText1,
                   ),
@@ -85,17 +121,17 @@ class MovieDetailsPage extends StatelessWidget {
         Positioned(
           top: 56,
           left: 4,
-          child: GestureDetector(
-            child: Container(
+          child: ExpandTapWidget(
+            onTap: () => Navigator.maybePop(context),
+            tapPadding: const EdgeInsets.all(50),
+            child: const SizedBox(
               width: 40,
               height: 40,
-              // color: Colors.red,
-              child: const Icon(
+              child: Icon(
                 Icons.arrow_back,
                 color: consts.textColor,
               ),
             ),
-            onTap: () => Navigator.maybePop(context),
           ),
         ),
       ],

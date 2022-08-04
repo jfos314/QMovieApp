@@ -21,13 +21,14 @@ class MovieListAdapter extends TypeAdapter<MovieList> {
       movieList: (fields[1] as List).cast<Movie>(),
       totalPages: fields[2] as int,
       totalResults: fields[3] as int,
+      favouriteList: (fields[4] as List?)?.cast<Movie>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, MovieList obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.page)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class MovieListAdapter extends TypeAdapter<MovieList> {
       ..writeByte(2)
       ..write(obj.totalPages)
       ..writeByte(3)
-      ..write(obj.totalResults);
+      ..write(obj.totalResults)
+      ..writeByte(4)
+      ..write(obj.favouriteList);
   }
 
   @override
